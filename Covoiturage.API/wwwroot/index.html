@@ -1,0 +1,910 @@
+﻿<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covoiturage Express .NET 10</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-full flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('trajets')">
+                <i class="fa-solid fa-car-side text-blue-500 text-2xl"></i>
+                <span class="text-xl font-bold tracking-tight text-white">Covoit<span class="text-blue-500">Express</span></span>
+            </div>
+
+            <nav id="navLinks" class="flex items-center gap-3 sm:gap-4"></nav>
+        </div>
+    </header>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="hidden fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium border transition-all"></div>
+
+    <!-- Contenu Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- VIEW 1: RECHERCHE & LISTE DES TRAJETS -->
+        <section id="viewTrajets" class="space-y-6">
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-blue-400"><i class="fa-solid fa-magnifying-glass mr-2"></i>Trouver un trajet</h2>
+                    <button onclick="reinitialiserFiltres()" class="text-xs text-slate-400 hover:text-slate-200"><i class="fa-solid fa-rotate-left mr-1"></i>Réinitialiser</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Départ (Optionnel)</label>
+                        <select id="searchDepart" onchange="chargerTrajets(1)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-blue-500 outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Destination (Optionnelle)</label>
+                        <select id="searchArrivee" onchange="chargerTrajets(1)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-blue-500 outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Date exacte (Optionnelle)</label>
+                        <input type="date" id="searchDate" onchange="chargerTrajets(1)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille des trajets -->
+            <div id="trajetsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <!-- Pagination -->
+            <div id="pagination" class="flex justify-center items-center gap-4 mt-6"></div>
+        </section>
+
+        <!-- VIEW 2: AUTHENTIFICATION -->
+        <section id="viewAuth" class="hidden max-w-md mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl">
+            <div id="authTabs" class="flex border-b border-slate-700 mb-6">
+                <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 pb-3 text-center font-semibold border-b-2 border-blue-500 text-blue-400">Connexion</button>
+                <button id="tabRegister" onclick="switchAuthTab('register')" class="flex-1 pb-3 text-center font-semibold text-slate-400 border-b-2 border-transparent">Inscription</button>
+            </div>
+
+            <!-- Formulaire Connexion -->
+            <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Adresse Email</label>
+                    <input type="email" id="loginEmail" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Mot de passe</label>
+                    <input type="password" id="loginPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500">
+                </div>
+                <button id="btnLoginSubmit" type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50">Se connecter</button>
+            </form>
+
+            <!-- Formulaire Inscription -->
+            <form id="formRegister" onsubmit="handleRegister(event)" class="hidden space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Prénom</label>
+                        <input type="text" id="regPrenom" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Nom</label>
+                        <input type="text" id="regNom" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Email</label>
+                    <input type="email" id="regEmail" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Téléphone portable</label>
+                    <input type="tel" id="regTel" placeholder="ex: 21698000111" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Mot de passe</label>
+                    <input type="password" id="regPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm outline-none">
+                </div>
+                <button id="btnRegSubmit" type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50">Créer mon compte</button>
+            </form>
+
+            <!-- Formulaire Vérification OTP -->
+            <form id="formVerify" onsubmit="handleVerifyEmail(event)" class="hidden space-y-4">
+                <div class="text-center">
+                    <i class="fa-solid fa-envelope-circle-check text-green-400 text-3xl mb-2"></i>
+                    <h3 class="text-md font-semibold text-white">Vérification de votre compte</h3>
+                    <p class="text-xs text-slate-400 mt-1">Entrez le code à 6 chiffres généré dans la console du serveur pour <span id="verifyEmailDisplay" class="text-white font-semibold"></span>.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Code OTP (6 chiffres)</label>
+                    <input type="text" id="verifyCode" maxlength="6" placeholder="123456" required class="w-full text-center tracking-widest text-lg font-mono bg-slate-900 border border-slate-700 rounded-lg p-2.5 outline-none focus:border-green-500">
+                </div>
+                <button id="btnVerifySubmit" type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50">
+                    Valider mon compte
+                </button>
+                <button type="button" onclick="switchAuthTab('login')" class="w-full text-xs text-slate-400 hover:text-white pt-1">
+                    Retour à la connexion
+                </button>
+            </form>
+        </section>
+
+        <!-- VIEW 3: PUBLIER UN TRAJET -->
+        <section id="viewPublier" class="hidden max-w-2xl mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl space-y-6">
+            <h2 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-plus-circle mr-2"></i>Publier un nouveau trajet</h2>
+
+            <form id="formPublier" onsubmit="handlePublierTrajet(event)" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Ville Départ</label>
+                        <select id="pubDepart" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Ville Arrivée</label>
+                        <select id="pubArrivee" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Date et heure de départ</label>
+                        <input type="datetime-local" id="pubDate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Mon Véhicule</label>
+                        <select id="pubVehicule" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Places disponibles</label>
+                        <input type="number" id="pubPlaces" min="1" max="8" value="3" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Prix par place (TND)</label>
+                        <input type="number" id="pubPrix" step="0.5" min="1" value="20" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm">
+                    </div>
+                </div>
+
+                <button id="btnPublierSubmit" type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50">
+                    Publier le trajet
+                </button>
+            </form>
+
+            <div class="border-t border-slate-700 pt-4 mt-6">
+                <details class="cursor-pointer">
+                    <summary class="text-xs text-blue-400 font-semibold">+ Ajouter un véhicule à mon compte</summary>
+                    <form onsubmit="handleAjoutVehicule(event)" class="grid grid-cols-2 gap-3 mt-3">
+                        <input type="text" id="vehMarque" placeholder="Marque" required class="bg-slate-900 border border-slate-700 p-2 rounded text-xs">
+                        <input type="text" id="vehModele" placeholder="Modèle" required class="bg-slate-900 border border-slate-700 p-2 rounded text-xs">
+                        <input type="text" id="vehImmat" placeholder="Immatriculation" required class="bg-slate-900 border border-slate-700 p-2 rounded text-xs">
+                        <input type="number" id="vehPlaces" min="1" max="8" value="4" placeholder="Places" required class="bg-slate-900 border border-slate-700 p-2 rounded text-xs">
+                        <button type="submit" class="col-span-2 bg-slate-700 hover:bg-slate-600 py-1.5 rounded text-xs">Enregistrer</button>
+                    </form>
+                </details>
+            </div>
+        </section>
+
+        <!-- VIEW 4: MES RÉSERVATIONS (PASSAGER) -->
+        <section id="viewMesReservations" class="hidden space-y-4">
+            <h2 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-ticket mr-2"></i>Mes Réservations en cours</h2>
+            <div id="mesReservationsList" class="space-y-3"></div>
+        </section>
+
+        <!-- VIEW 5: DEMANDES CONDUCTEUR -->
+        <section id="viewDemandesConducteur" class="hidden space-y-4">
+            <h2 class="text-xl font-bold text-amber-400"><i class="fa-solid fa-phone-volume mr-2"></i>Demandes reçues à valider</h2>
+            <p class="text-xs text-slate-400">Appelez le passager au numéro indiqué avant de confirmer la réservation.</p>
+            <div id="demandesConducteurList" class="space-y-3"></div>
+        </section>
+
+        <!-- VIEW 6: DASHBOARD ADMIN (RÉSERVÉ AU RÔLE ADMIN) -->
+        <section id="viewAdminDashboard" class="hidden space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-purple-400"><i class="fa-solid fa-shield-halved mr-2"></i>Tableau de bord Administrateur</h2>
+                    <p class="text-xs text-slate-400">Supervision globale de la plateforme Covoiturage</p>
+                </div>
+                <button onclick="navigate('trajets')" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-2 rounded-lg">
+                    <i class="fa-solid fa-arrow-left mr-1"></i>Retour à l'interface publique
+                </button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="text-xs text-slate-400">Utilisateurs inscrits</div>
+                    <div id="statUsers" class="text-2xl font-bold text-white mt-1">0</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="text-xs text-slate-400">Trajets créés</div>
+                    <div id="statTrajets" class="text-2xl font-bold text-blue-400 mt-1">0</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="text-xs text-slate-400">Réservations</div>
+                    <div id="statResas" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="text-xs text-slate-400">Villes actives</div>
+                    <div id="statVilles" class="text-2xl font-bold text-amber-400 mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Liste des Utilisateurs -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 space-y-4">
+                <h3 class="text-md font-semibold text-slate-200"><i class="fa-solid fa-users mr-2"></i>Comptes Utilisateurs &amp; Rôles</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="py-2">Nom Complet</th>
+                                <th class="py-2">Email</th>
+                                <th class="py-2">Téléphone</th>
+                                <th class="py-2">Rôles</th>
+                                <th class="py-2">Date Inscription</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersTable" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODALE DE RÉSERVATION MODERNE -->
+        <div id="modalReservation" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chair text-blue-400"></i> Choisir les places
+                    </h3>
+                    <button onclick="fermerModalReservation()" class="text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Nombre de place(s) souhaitée(s)</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="ajusterPlaces(-1)" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg flex items-center justify-center transition">-</button>
+                        <input type="number" id="modalNbPlaces" min="1" max="8" value="1" class="w-full text-center text-lg font-bold bg-slate-900 border border-slate-700 rounded-xl py-2 outline-none focus:border-blue-500 text-white">
+                        <button type="button" onclick="ajusterPlaces(1)" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg flex items-center justify-center transition">+</button>
+                    </div>
+                    <p id="modalPlacesMaxInfo" class="text-[11px] text-slate-400 mt-2 text-center"></p>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="fermerModalReservation()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium py-2.5 rounded-xl transition">
+                        Annuler
+                    </button>
+                    <button type="button" id="btnConfirmerModal" onclick="confirmerReservationModal()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold py-2.5 rounded-xl transition shadow-lg">
+                        Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_URL = '/api';
+        let currentUser = JSON.parse(localStorage.getItem('user')) || null;
+        let villesCache = [];
+        let pendingVerificationEmail = '';
+        let selectedTrajetId = null;
+        let maxPlacesDispo = 1;
+
+        const StatutResaEnum = {
+            0: { label: 'En attente', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+            1: { label: 'Confirmée', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+            2: { label: 'Refusée', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
+            3: { label: 'Demande d\'annulation', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+            4: { label: 'Annulée', color: 'bg-slate-600/30 text-slate-400 border-slate-600' }
+        };
+
+        function notify(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium border ${isError ? 'bg-red-950/90 text-red-200 border-red-700' : 'bg-emerald-950/90 text-emerald-200 border-emerald-700'}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        function authHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': currentUser ? `Bearer ${currentUser.token}` : ''
+            };
+        }
+
+        function reinitialiserFiltres() {
+            document.getElementById('searchDepart').value = '';
+            document.getElementById('searchArrivee').value = '';
+            document.getElementById('searchDate').value = '';
+            chargerTrajets(1);
+        }
+
+        function navigate(viewName) {
+            ['viewTrajets', 'viewAuth', 'viewPublier', 'viewMesReservations', 'viewDemandesConducteur', 'viewAdminDashboard'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+
+            if (viewName === 'trajets') {
+                document.getElementById('viewTrajets').classList.remove('hidden');
+                chargerTrajets();
+            } else if (viewName === 'auth') {
+                document.getElementById('viewAuth').classList.remove('hidden');
+            } else if (viewName === 'publier') {
+                if (!currentUser) return navigate('auth');
+                document.getElementById('viewPublier').classList.remove('hidden');
+                chargerVehiculesSelect();
+            } else if (viewName === 'mes-reservations') {
+                if (!currentUser) return navigate('auth');
+                document.getElementById('viewMesReservations').classList.remove('hidden');
+                chargerMesReservations();
+            } else if (viewName === 'demandes-conducteur') {
+                if (!currentUser) return navigate('auth');
+                document.getElementById('viewDemandesConducteur').classList.remove('hidden');
+                chargerDemandesConducteur();
+            } else if (viewName === 'admin') {
+                if (!currentUser || !currentUser.roles || !currentUser.roles.includes('Admin')) {
+                    notify("Accès réservé aux administrateurs", true);
+                    return navigate('trajets');
+                }
+                document.getElementById('viewAdminDashboard').classList.remove('hidden');
+                chargerAdminData();
+            }
+            renderNav();
+        }
+
+        function renderNav() {
+            const nav = document.getElementById('navLinks');
+            if (!currentUser) {
+                nav.innerHTML = `
+                        <button onclick="navigate('trajets')" class="text-sm font-medium text-slate-300 hover:text-white">Trajets</button>
+                        <button onclick="navigate('auth')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Connexion</button>
+                    `;
+            } else {
+                const isAdmin = currentUser.roles && currentUser.roles.includes('Admin');
+                let adminBtn = '';
+                if (isAdmin) {
+                    adminBtn = `
+                            <button onclick="navigate('admin')" class="bg-purple-600/30 border border-purple-500/50 hover:bg-purple-600/50 text-purple-300 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-shield-halved"></i> Dashboard Admin
+                            </button>
+                        `;
+                }
+
+                nav.innerHTML = `
+                        <button onclick="navigate('trajets')" class="text-xs sm:text-sm text-slate-300 hover:text-white">Trajets</button>
+                        <button onclick="navigate('publier')" class="text-xs sm:text-sm text-slate-300 hover:text-white"><i class="fa-solid fa-plus text-blue-400 mr-1"></i>Publier</button>
+                        <button onclick="navigate('mes-reservations')" class="text-xs sm:text-sm text-slate-300 hover:text-white">Mes Résas</button>
+                        <button onclick="navigate('demandes-conducteur')" class="text-xs sm:text-sm text-amber-400 hover:text-amber-300">Demandes</button>
+                        ${adminBtn}
+                        <div class="flex items-center gap-2 border-l border-slate-700 pl-3">
+                            <span class="text-xs font-semibold text-slate-300 hidden md:inline">${currentUser.nomComplet}</span>
+                            <button onclick="logout()" title="Déconnexion" class="text-slate-400 hover:text-red-400 text-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+                        </div>
+                    `;
+            }
+        }
+
+        async function chargerVilles() {
+            try {
+                const res = await fetch(`${API_URL}/villes`);
+                villesCache = await res.json();
+                const opts = '<option value="">Toutes les villes</option>' + villesCache.map(v => `<option value="${v.id}">${v.nom} (${v.codePostal})</option>`).join('');
+                document.getElementById('searchDepart').innerHTML = opts;
+                document.getElementById('searchArrivee').innerHTML = opts;
+
+                const reqOpts = '<option value="">Sélectionnez une ville</option>' + villesCache.map(v => `<option value="${v.id}">${v.nom}</option>`).join('');
+                document.getElementById('pubDepart').innerHTML = reqOpts;
+                document.getElementById('pubArrivee').innerHTML = reqOpts;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function chargerTrajets(page = 1) {
+            const dep = document.getElementById('searchDepart').value;
+            const arr = document.getElementById('searchArrivee').value;
+            const date = document.getElementById('searchDate').value;
+
+            let url = `${API_URL}/trajets/search?page=${page}&pageSize=6`;
+            if (dep) url += `&villeDepartId=${dep}`;
+            if (arr) url += `&villeArriveeId=${arr}`;
+            if (date) url += `&date=${date}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const container = document.getElementById('trajetsList');
+
+                if (data.items.length === 0) {
+                    container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">Aucun trajet ne correspond à ces critères.</div>`;
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+
+                container.innerHTML = data.items.map(t => {
+                    const dateDep = new Date(t.dateDepart).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+                    return `
+                            <div class="bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-3">
+                                        <div class="text-sm font-semibold text-white">
+                                            <span class="text-blue-400">${t.villeDepartNom}</span> <i class="fa-solid fa-arrow-right text-xs mx-1 text-slate-500"></i> <span class="text-emerald-400">${t.villeArriveeNom}</span>
+                                        </div>
+                                        <span class="text-lg font-bold text-amber-400">${t.prixParPlace} TND</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400 space-y-1 mb-4">
+                                        <div><i class="fa-regular fa-clock mr-1 text-slate-500"></i> ${dateDep}</div>
+                                        <div><i class="fa-solid fa-car mr-1 text-slate-500"></i> ${t.vehiculeMarque} ${t.vehiculeModele}</div>
+                                        <div><i class="fa-solid fa-user-circle mr-1 text-slate-500"></i> Conducteur: ${t.conducteurNomComplet}</div>
+                                        <div class="text-emerald-400 font-semibold"><i class="fa-solid fa-chair mr-1"></i> ${t.placesDisponibles} place(s) libre(s)</div>
+                                    </div>
+                                </div>
+                                <button onclick="ouvrirModalReservation(${t.id}, ${t.placesDisponibles})" class="w-full bg-blue-600/90 hover:bg-blue-600 text-white font-medium py-2 rounded-xl text-sm transition">
+                                    <i class="fa-solid fa-hand-pointer mr-1"></i> Réserver
+                                </button>
+                            </div>
+                        `;
+                }).join('');
+
+                let pagHtml = '';
+                if (data.hasPreviousPage) {
+                    pagHtml += `<button onclick="chargerTrajets(${data.page - 1})" class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm hover:bg-slate-700">Précédent</button>`;
+                }
+                pagHtml += `<span class="text-xs text-slate-400">Page ${data.page} sur ${data.totalPages} (${data.totalCount} trajets)</span>`;
+                if (data.hasNextPage) {
+                    pagHtml += `<button onclick="chargerTrajets(${data.page + 1})" class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm hover:bg-slate-700">Suivant</button>`;
+                }
+                document.getElementById('pagination').innerHTML = pagHtml;
+            } catch (err) {
+                notify("Erreur lors de la recherche des trajets", true);
+            }
+        }
+
+        async function handlePublierTrajet(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnPublierSubmit');
+            btn.disabled = true;
+            btn.textContent = "Publication en cours...";
+
+            try {
+                const payload = {
+                    villeDepartId: parseInt(document.getElementById('pubDepart').value),
+                    villeArriveeId: parseInt(document.getElementById('pubArrivee').value),
+                    dateDepart: new Date(document.getElementById('pubDate').value).toISOString(),
+                    vehiculeId: parseInt(document.getElementById('pubVehicule').value),
+                    placesDisponibles: parseInt(document.getElementById('pubPlaces').value),
+                    prixParPlace: parseFloat(document.getElementById('pubPrix').value)
+                };
+
+                const res = await fetch(`${API_URL}/trajets`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.detail || "Erreur de publication");
+
+                notify("Votre trajet a été publié avec succès !");
+                document.getElementById('formPublier').reset();
+                navigate('trajets');
+            } catch (err) {
+                notify(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Publier le trajet";
+            }
+        }
+
+        function ouvrirModalReservation(trajetId, placesDisponibles) {
+            if (!currentUser) {
+                notify("Veuillez vous connecter pour réserver");
+                return navigate('auth');
+            }
+
+            selectedTrajetId = trajetId;
+            maxPlacesDispo = placesDisponibles;
+
+            const inputPlaces = document.getElementById('modalNbPlaces');
+            inputPlaces.value = 1;
+            inputPlaces.max = placesDisponibles;
+
+            document.getElementById('modalPlacesMaxInfo').textContent = `${placesDisponibles} place(s) disponible(s) sur ce trajet`;
+            document.getElementById('modalReservation').classList.remove('hidden');
+        }
+
+        function fermerModalReservation() {
+            document.getElementById('modalReservation').classList.add('hidden');
+            selectedTrajetId = null;
+        }
+
+        function ajusterPlaces(delta) {
+            const input = document.getElementById('modalNbPlaces');
+            let val = parseInt(input.value) || 1;
+            val += delta;
+            if (val >= 1 && val <= maxPlacesDispo) {
+                input.value = val;
+            }
+        }
+
+        async function confirmerReservationModal() {
+            const input = document.getElementById('modalNbPlaces');
+            const places = parseInt(input.value);
+
+            if (!places || places < 1 || places > maxPlacesDispo) {
+                notify(`Veuillez choisir un nombre de places entre 1 et ${maxPlacesDispo}`, true);
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmerModal');
+            btn.disabled = true;
+            btn.textContent = "Réservation...";
+
+            try {
+                const res = await fetch(`${API_URL}/reservations`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        trajetId: selectedTrajetId,
+                        nombrePlaces: places
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.detail || "Erreur de réservation");
+
+                fermerModalReservation();
+                notify("Demande envoyée ! Le conducteur va vous appeler pour confirmer.");
+                navigate('mes-reservations');
+            } catch (err) {
+                notify(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Confirmer";
+            }
+        }
+
+        async function chargerMesReservations() {
+            try {
+                const res = await fetch(`${API_URL}/reservations/mes-reservations`, { headers: authHeaders() });
+                const list = await res.json();
+                const container = document.getElementById('mesReservationsList');
+
+                if (list.length === 0) {
+                    container.innerHTML = `<div class="p-6 text-center text-slate-400 bg-slate-800 rounded-xl">Aucune réservation pour le moment.</div>`;
+                    return;
+                }
+
+                container.innerHTML = list.map(r => {
+                    const st = StatutResaEnum[r.statut] || { label: 'Inconnu', color: 'bg-slate-700' };
+                    const dateDep = new Date(r.dateDepart).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+                    let btnAnnulation = '';
+                    if (r.statut === 0) {
+                        btnAnnulation = `<button onclick="annulerReservation(${r.id})" class="text-xs bg-red-950/40 hover:bg-red-900 border border-red-700 text-red-300 px-3 py-1.5 rounded-lg transition">Annuler</button>`;
+                    } else if (r.statut === 1) {
+                        btnAnnulation = `<button onclick="annulerReservation(${r.id})" class="text-xs bg-orange-950/40 hover:bg-orange-900 border border-orange-700 text-orange-300 px-3 py-1.5 rounded-lg transition">Demander l'annulation</button>`;
+                    }
+
+                    return `
+                            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold text-white">${r.villeDepartNom} <i class="fa-solid fa-arrow-right text-xs text-slate-500"></i> ${r.villeArriveeNom}</span>
+                                        <span class="text-xs px-2.5 py-0.5 rounded-full border ${st.color}">${st.label}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400 mt-1">
+                                        ${dateDep} · ${r.nombrePlaces} place(s) · <span class="text-amber-400 font-semibold">${r.prixTotal} TND</span>
+                                    </div>
+                                    <div class="text-xs text-slate-300 mt-1">
+                                        Conducteur : <strong>${r.conducteurNomComplet}</strong> (${r.conducteurPhoneNumber})
+                                    </div>
+                                </div>
+                                <div>${btnAnnulation}</div>
+                            </div>
+                        `;
+                }).join('');
+            } catch (err) {
+                notify("Erreur chargement réservations", true);
+            }
+        }
+
+        async function chargerDemandesConducteur() {
+            try {
+                const res = await fetch(`${API_URL}/reservations/demandes-conducteur`, { headers: authHeaders() });
+                const list = await res.json();
+                const container = document.getElementById('demandesConducteurList');
+
+                if (list.length === 0) {
+                    container.innerHTML = `<div class="p-6 text-center text-slate-400 bg-slate-800 rounded-xl">Aucune demande reçue pour vos trajets.</div>`;
+                    return;
+                }
+
+                container.innerHTML = list.map(d => {
+                    const st = StatutResaEnum[d.statut] || { label: 'Inconnu', color: 'bg-slate-700' };
+                    const dateDep = new Date(d.dateDepart).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+                    let actions = '';
+                    if (d.statut === 0) {
+                        actions = `
+                                <div class="flex gap-2">
+                                    <a href="tel:${d.passagerPhoneNumber}" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+                                        <i class="fa-solid fa-phone"></i> Appeler (${d.passagerPhoneNumber})
+                                    </a>
+                                    <button onclick="traiterDemande(${d.id}, 'confirmer')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg font-medium">Confirmer</button>
+                                    <button onclick="traiterDemande(${d.id}, 'refuser')" class="bg-red-600 hover:bg-red-500 text-white text-xs px-3 py-2 rounded-lg">Refuser</button>
+                                </div>
+                            `;
+                    } else if (d.statut === 3) {
+                        actions = `
+                                <button onclick="accepterAnnulationConducteur(${d.id})" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-2 rounded-lg font-medium">
+                                    Accepter l'annulation (+places)
+                                </button>
+                            `;
+                    }
+
+                    return `
+                            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold text-white">${d.villeDepartNom} <i class="fa-solid fa-arrow-right text-xs text-slate-500"></i> ${d.villeArriveeNom}</span>
+                                        <span class="text-xs px-2.5 py-0.5 rounded-full border ${st.color}">${st.label}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400 mt-1">Départ : ${dateDep} · Places : <strong>${d.nombrePlaces}</strong></div>
+                                    <div class="text-xs text-blue-300 mt-1">Passager : <strong>${d.passagerNomComplet}</strong> (Tél : ${d.passagerPhoneNumber})</div>
+                                </div>
+                                <div>${actions}</div>
+                            </div>
+                        `;
+                }).join('');
+            } catch (err) {
+                notify("Erreur chargement demandes", true);
+            }
+        }
+
+        async function traiterDemande(id, action) {
+            try {
+                const res = await fetch(`${API_URL}/reservations/${id}/${action}`, { method: 'PATCH', headers: authHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Erreur");
+                notify(data.message);
+                chargerDemandesConducteur();
+            } catch (err) {
+                notify(err.message, true);
+            }
+        }
+
+        async function annulerReservation(id) {
+            if (!confirm("Voulez-vous vraiment annuler ?")) return;
+            try {
+                const res = await fetch(`${API_URL}/reservations/${id}/annuler`, { method: 'PATCH', headers: authHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Erreur");
+                notify(data.message);
+                chargerMesReservations();
+            } catch (err) {
+                notify(err.message, true);
+            }
+        }
+
+        async function accepterAnnulationConducteur(id) {
+            try {
+                const res = await fetch(`${API_URL}/reservations/${id}/accepter-annulation`, { method: 'PATCH', headers: authHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Erreur");
+                notify(data.message);
+                chargerDemandesConducteur();
+            } catch (err) {
+                notify(err.message, true);
+            }
+        }
+
+        async function chargerAdminData() {
+            try {
+                const resStats = await fetch(`${API_URL}/admin/stats`, { headers: authHeaders() });
+                if (resStats.ok) {
+                    const stats = await resStats.json();
+                    document.getElementById('statUsers').textContent = stats.totalUsers;
+                    document.getElementById('statTrajets').textContent = stats.totalTrajets;
+                    document.getElementById('statResas').textContent = stats.totalReservations;
+                    document.getElementById('statVilles').textContent = stats.totalVilles;
+                }
+
+                const resUsers = await fetch(`${API_URL}/admin/users`, { headers: authHeaders() });
+                if (resUsers.ok) {
+                    const users = await resUsers.json();
+                    document.getElementById('adminUsersTable').innerHTML = users.map(u => `
+                            <tr>
+                                <td class="py-2.5 font-semibold text-white">${u.prenom} ${u.nom}</td>
+                                <td class="py-2.5 text-slate-300">${u.email}</td>
+                                <td class="py-2.5 text-slate-300">${u.phoneNumber || '-'}</td>
+                                <td class="py-2.5"><span class="bg-blue-900/60 text-blue-200 px-2 py-0.5 rounded text-[11px]">${u.roles.join(', ')}</span></td>
+                                <td class="py-2.5 text-slate-400">${new Date(u.dateInscription).toLocaleDateString('fr-FR')}</td>
+                            </tr>
+                        `).join('');
+                }
+            } catch (err) {
+                notify("Erreur lors de la récupération des données admin", true);
+            }
+        }
+
+        async function chargerVehiculesSelect() {
+            try {
+                const res = await fetch(`${API_URL}/vehicules/mes-vehicules`, { headers: authHeaders() });
+                const vehicules = await res.json();
+                const select = document.getElementById('pubVehicule');
+                if (vehicules.length === 0) {
+                    select.innerHTML = '<option value="">Aucun véhicule disponible</option>';
+                } else {
+                    select.innerHTML = vehicules.map(v => `<option value="${v.id}">${v.marque} ${v.modele} (${v.immatriculation})</option>`).join('');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function handleAjoutVehicule(e) {
+            e.preventDefault();
+            try {
+                const payload = {
+                    marque: document.getElementById('vehMarque').value,
+                    modele: document.getElementById('vehModele').value,
+                    immatriculation: document.getElementById('vehImmat').value,
+                    nombrePlaces: parseInt(document.getElementById('vehPlaces').value)
+                };
+                const res = await fetch(`${API_URL}/vehicules`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error("Erreur ajout véhicule");
+                notify("Véhicule enregistré !");
+                chargerVehiculesSelect();
+                e.target.reset();
+            } catch (err) {
+                notify(err.message, true);
+            }
+        }
+
+        function afficherEcranVerification(email) {
+            pendingVerificationEmail = email;
+            document.getElementById('verifyEmailDisplay').textContent = email;
+            document.getElementById('authTabs').classList.add('hidden');
+            document.getElementById('formLogin').classList.add('hidden');
+            document.getElementById('formRegister').classList.add('hidden');
+            document.getElementById('formVerify').classList.remove('hidden');
+            document.getElementById('verifyCode').value = '';
+        }
+
+        function switchAuthTab(tab) {
+            document.getElementById('authTabs').classList.remove('hidden');
+            document.getElementById('formVerify').classList.add('hidden');
+
+            if (tab === 'login') {
+                document.getElementById('formLogin').classList.remove('hidden');
+                document.getElementById('formRegister').classList.add('hidden');
+                document.getElementById('tabLogin').className = 'flex-1 pb-3 text-center font-semibold border-b-2 border-blue-500 text-blue-400';
+                document.getElementById('tabRegister').className = 'flex-1 pb-3 text-center font-semibold text-slate-400 border-b-2 border-transparent';
+            } else {
+                document.getElementById('formLogin').classList.add('hidden');
+                document.getElementById('formRegister').classList.remove('hidden');
+                document.getElementById('tabRegister').className = 'flex-1 pb-3 text-center font-semibold border-b-2 border-green-500 text-green-400';
+                document.getElementById('tabLogin').className = 'flex-1 pb-3 text-center font-semibold text-slate-400 border-b-2 border-transparent';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLoginSubmit');
+            btn.disabled = true;
+            btn.textContent = "Connexion...";
+
+            const email = document.getElementById('loginEmail').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+                const data = await res.json();
+
+                if (!res.ok && data.email) {
+                    notify(data.message, true);
+                    afficherEcranVerification(data.email);
+                    return;
+                }
+
+                if (!res.ok || !data.success) throw new Error(data.message || "Identifiants invalides");
+
+                currentUser = data;
+                localStorage.setItem('user', JSON.stringify(data));
+                notify(`Bienvenue ${data.nomComplet}`);
+                navigate('trajets');
+            } catch (err) {
+                notify(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Se connecter";
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnRegSubmit');
+            btn.disabled = true;
+            btn.textContent = "Création du compte...";
+
+            const email = document.getElementById('regEmail').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nom: document.getElementById('regNom').value,
+                        prenom: document.getElementById('regPrenom').value,
+                        email: email,
+                        phoneNumber: document.getElementById('regTel').value,
+                        password: document.getElementById('regPassword').value
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Erreur lors de l'inscription");
+
+                notify("Compte créé ! Consultez le code OTP dans la console du serveur.");
+                document.getElementById('formRegister').reset();
+                afficherEcranVerification(email);
+            } catch (err) {
+                notify(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Créer mon compte";
+            }
+        }
+
+        async function handleVerifyEmail(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnVerifySubmit');
+            btn.disabled = true;
+            btn.textContent = "Vérification...";
+
+            try {
+                const res = await fetch(`${API_URL}/auth/verify-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: pendingVerificationEmail,
+                        code: document.getElementById('verifyCode').value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Code OTP invalide");
+
+                currentUser = data;
+                localStorage.setItem('user', JSON.stringify(data));
+                notify("Compte activé avec succès !");
+                switchAuthTab('login');
+                navigate('trajets');
+            } catch (err) {
+                notify(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Valider mon compte";
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('user');
+            notify("Déconnexion réussie");
+            navigate('trajets');
+        }
+
+        window.onload = async () => {
+            await chargerVilles();
+            navigate('trajets');
+        };
+    </script>
+</body>
+</html>

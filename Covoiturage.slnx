@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Covoiturage.API/Covoiturage.API.csproj" />
+  <Project Path="Covoiturage.Application/Covoiturage.Application.csproj" />
+  <Project Path="Covoiturage.Domain/Covoiturage.Domain.csproj" />
+  <Project Path="Covoiturage.Infrastructure/Covoiturage.Infrastructure.csproj" />
+</Solution>

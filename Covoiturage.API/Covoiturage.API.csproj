@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- Active la génération du fichier XML pour Swagger -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- Supprime les avertissements pour les commentaires XML non remplis -->
+		<NoWarn>$(NoWarn);1591</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.OpenApi" Version="1.6.22" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Covoiturage.Application\Covoiturage.Application.csproj" />
+    <ProjectReference Include="..\Covoiturage.Infrastructure\Covoiturage.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

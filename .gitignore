@@ -1,0 +1,15 @@
+## Fichiers de compilation .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio & VS Code
+.vs/
+.vscode/
+*.DotSettings.user
+
+## Fichiers de logs
+*.log
